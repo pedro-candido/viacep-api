@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { Router } from 'express';
 import Address from '../models/addressModel';
+import { throwErr } from '../utils';
 
 const router = Router();
 
@@ -26,27 +27,65 @@ router.get('/api/:cep', async (req, res) => {
   return JSON.stringify(data);
 });
 
-router.post('/api/register', async (req, res) => {
-  const {
-    body: { zipCode, addressNumber },
-  } = req;
+router.put('/api/changeaddress/:id', async (req, res) => {
+  try {
+    const item = await Address.findOne({ _id: req.params.id });
+    console.warn('item', item);
+    const {
+      body: { zipCode, addressNumber },
+    } = req;
 
-  if (!zipCode || !addressNumber) {
-    Promise.reject(new Error('404 - Opa, faltou algum dado'));
+    throwErr({ zipCode, addressNumber });
+
+    const { data } = await axios.get(
+      `https://viacep.com.br/ws/${zipCode}/json/`
+    );
+
+    item?.overwrite({ ...data, addressNumber }).save();
+
+    return res.send(item);
+  } catch (err) {
+    return res
+      .status(400)
+      .send('Bad request - Opa, parece que faltou preencher algum dado');
   }
+});
 
-  const { data } = await axios.get(`https://viacep.com.br/ws/${zipCode}/json/`);
+router.post('/api/register', async (req, res) => {
+  try {
+    const {
+      body: { zipCode, addressNumber },
+    } = req;
 
-  const newData = {
-    ...data,
-    addressNumber,
-  };
+    throwErr({ zipCode, addressNumber });
 
-  const address = new Address(newData);
+    const { data } = await axios.get(
+      `https://viacep.com.br/ws/${zipCode}/json/`
+    );
 
-  await address.save();
+    const newData = {
+      ...data,
+      addressNumber,
+    };
 
-  return res.send(address);
+    const address = new Address(newData);
+
+    await address.save();
+
+    return res.send(address);
+  } catch (err) {
+    return res
+      .status(400)
+      .send('Bad request - Opa, parece que faltou preencher algum dado');
+  }
+});
+
+router.delete('/api/deleteaddress/:id', async (req, res) => {
+  const { id } = req.params;
+
+  await Address.findByIdAndDelete(id);
+
+  return res.send(`${id} address deleted`);
 });
 
 export default router;
