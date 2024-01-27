@@ -15,8 +15,7 @@ class AddressController {
     );
 
     res.send(JSON.stringify(data));
-
-    return JSON.stringify(data);
+    return data;
   }
   async create(req: Request, res: Response) {
     try {
@@ -39,7 +38,7 @@ class AddressController {
 
       await address.save();
 
-      return res.send(address);
+      return res.json(address);
     } catch (err) {
       return res
         .status(400)
