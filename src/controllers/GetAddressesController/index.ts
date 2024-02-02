@@ -1,0 +1,1 @@
+export { GetAddressesController } from './GetAddressesController';
